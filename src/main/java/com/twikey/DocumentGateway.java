@@ -51,12 +51,12 @@ public class DocumentGateway {
      * @throws IOException A network error occurred
      * @throws TwikeyClient.UserException A Twikey generated user error occurred
      */
-    public JSONObject create(long ct, Customer customer, Map<String, String> mandateDetails) throws IOException, TwikeyClient.UserException {
-        Map<String, String> params = new HashMap<>(mandateDetails);
-        params.put("ct", String.valueOf(ct));
-        if (customer != null) {
-            params.putAll(customer.asFormParameters());
-        }
+    public JSONObject create(Map<String, String> mandateDetails) throws IOException, TwikeyClient.UserException {
+//        Map<String, String> params = new HashMap<>(mandateDetails);
+//        params.put("ct", String.valueOf(ct));
+//        if (customer != null) {
+//            params.putAll(customer.asFormParameters());
+//        }
 
         URL myurl = twikeyClient.getUrl("/invite");
         HttpURLConnection con = (HttpURLConnection) myurl.openConnection();
@@ -68,7 +68,7 @@ public class DocumentGateway {
         con.setDoInput(true);
 
         try (DataOutputStream output = new DataOutputStream(con.getOutputStream())) {
-            output.writeBytes(getPostDataString(params));
+            output.writeBytes(getPostDataString(mandateDetails));
             output.flush();
         }
 
