@@ -185,6 +185,11 @@ public class TwikeyClient {
         public UserException(String apiError) {
             super(apiError);
         }
+
+        @Override
+        public String toString() {
+            return "Twikey api "+getMessage();
+        }
     }
 
     public static class UnauthenticatedException extends UserException {

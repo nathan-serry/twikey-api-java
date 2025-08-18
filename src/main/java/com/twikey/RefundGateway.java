@@ -1,7 +1,6 @@
 package com.twikey;
 
 import com.twikey.callback.RefundCallback;
-import com.twikey.modal.Account;
 import com.twikey.modal.DocumentRequests;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -100,10 +99,10 @@ public class RefundGateway {
      * @throws IOException   When no connection could be made
      * @throws com.twikey.TwikeyClient.UserException When Twikey returns a user error (400)
      */
-    public JSONObject createBeneficiaryAccount(DocumentRequests.Customer customer, Account account) throws IOException, TwikeyClient.UserException {
+    public JSONObject createBeneficiaryAccount(DocumentRequests.Customer customer, DocumentRequests.Account account) throws IOException, TwikeyClient.UserException {
         Map<String, String> params = new HashMap<>(customer.asFormParameters());
-        params.put("iban",account.getIban());
-        params.put("bic",account.getBic());
+        params.put("iban",account.iban());
+        params.put("bic",account.bic());
 
         URL myurl = twikeyClient.getUrl("/transfers/beneficiaries");
         HttpURLConnection con = (HttpURLConnection) myurl.openConnection();

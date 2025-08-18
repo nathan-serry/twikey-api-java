@@ -49,7 +49,7 @@ public class PaylinkGateway {
         Map<String, String> params = new HashMap<>(linkDetails);
         params.put("ct", String.valueOf(ct));
         if (customer != null) {
-            params.put("customerNumber", customer.getNumber());
+            params.put("customerNumber", customer.getCustomerNumber());
             params.put("email", customer.getEmail());
             params.put("firstname", customer.getFirstname());
             params.put("lastname", customer.getLastname());

@@ -46,7 +46,7 @@ public class InvoiceGateway {
     public JSONObject create(long ct, DocumentRequests.Customer customer, Map<String, String> invoiceDetails) throws IOException, TwikeyClient.UserException {
 
         JSONObject customerAsJson = new JSONObject()
-                .put("customerNumber", customer.getNumber())
+                .put("customerNumber", customer.getCustomerNumber())
                 .put("email", customer.getEmail())
                 .put("firstname", customer.getFirstname())
                 .put("lastname", customer.getLastname())

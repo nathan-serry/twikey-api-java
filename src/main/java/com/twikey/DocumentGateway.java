@@ -14,6 +14,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 import static com.twikey.TwikeyClient.getPostDataString;
 
@@ -42,8 +44,6 @@ public class DocumentGateway {
      * <li>requireValidation	Always start with the registration page, even with all known mandate details</li>
      * </ul>
      *
-     * @param ct             Template to use can be found @ <a href="https://www.twikey.com/r/admin#/c/template">https://www.twikey.com/r/admin#/c/template</a>
-     * @param customer       Customer details
      * @param mandateDetails Map containing any of the parameters in the above table
      * @throws IOException   When no connection could be made
      * @throws com.twikey.TwikeyClient.UserException When Twikey returns a user error (400)
@@ -51,13 +51,7 @@ public class DocumentGateway {
      * @throws IOException A network error occurred
      * @throws TwikeyClient.UserException A Twikey generated user error occurred
      */
-    public JSONObject create(Map<String, String> mandateDetails) throws IOException, TwikeyClient.UserException {
-//        Map<String, String> params = new HashMap<>(mandateDetails);
-//        params.put("ct", String.valueOf(ct));
-//        if (customer != null) {
-//            params.putAll(customer.asFormParameters());
-//        }
-
+    public JSONObject create(Map<String, String> MandateDetails) throws IOException, TwikeyClient.UserException {
         URL myurl = twikeyClient.getUrl("/invite");
         HttpURLConnection con = (HttpURLConnection) myurl.openConnection();
         con.setRequestMethod("POST");
@@ -68,7 +62,7 @@ public class DocumentGateway {
         con.setDoInput(true);
 
         try (DataOutputStream output = new DataOutputStream(con.getOutputStream())) {
-            output.writeBytes(getPostDataString(mandateDetails));
+            output.writeBytes(getPostDataString(MandateDetails));
             output.flush();
         }
 
@@ -99,19 +93,12 @@ public class DocumentGateway {
      * <li>place:	Place of signature</li>
      * </ul>
      *
-     * @param ct             Template to use can be found @ <a href="https://www.twikey.com/r/admin#/c/template">https://www.twikey.com/r/admin#/c/template</a>
-     * @param customer       Customer details
      * @param mandateDetails Map containing any of the parameters in the above table
      * @return Url to redirect the customer to or to send in an email
      * @throws IOException A network error occurred
      * @throws TwikeyClient.UserException A Twikey generated user error occurred
      */
-    public JSONObject sign(long ct, DocumentRequests.Customer customer, Map<String, String> mandateDetails) throws IOException, TwikeyClient.UserException {
-        Map<String, String> params = new HashMap<>(mandateDetails);
-        params.put("ct", String.valueOf(ct));
-        if (customer != null) {
-            params.putAll(customer.asFormParameters());
-        }
+    public JSONObject sign(Map<String, String> MandateDetails) throws IOException, TwikeyClient.UserException {
 
         URL myurl = twikeyClient.getUrl("/sign");
         HttpURLConnection con = (HttpURLConnection)myurl.openConnection();
@@ -123,7 +110,7 @@ public class DocumentGateway {
         con.setDoInput(true);
 
         try (DataOutputStream output = new DataOutputStream(con.getOutputStream())) {
-            output.writeBytes(getPostDataString(params));
+            output.writeBytes(getPostDataString(MandateDetails));
             output.flush();
         }
 
@@ -142,6 +129,84 @@ public class DocumentGateway {
             throw new TwikeyClient.UserException(apiError);
         }
     }
+
+    /**
+     * TODO
+     */
+    public void action(Map<String, String> ActionDetails) throws IOException, TwikeyClient.UserException {
+        URL myurl = twikeyClient.getUrl("/mandate/%s/action".formatted(String.valueOf(ActionDetails.get("mndtId"))));
+        HttpURLConnection con = (HttpURLConnection)myurl.openConnection();
+        con.setRequestMethod("POST");
+        con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+        con.setRequestProperty("User-Agent", twikeyClient.getUserAgent());
+        con.setRequestProperty("Authorization", twikeyClient.getSessionToken());
+        con.setDoOutput(true);
+        con.setDoInput(true);
+
+        try (DataOutputStream output = new DataOutputStream(con.getOutputStream())) {
+            output.writeBytes(getPostDataString(ActionDetails));
+            output.flush();
+        }
+
+        int responseCode = con.getResponseCode();
+        if (responseCode != 204) {
+            String apiError = con.getHeaderField("ApiError");
+            throw new TwikeyClient.UserException(apiError);
+        }
+    }
+
+    /**
+     * TODO
+     */
+    public JSONObject query(Map<String, String> QueryDetails) throws IOException, TwikeyClient.UserException {
+        URL myurl = twikeyClient.getUrl("/mandate/query?"+getPostDataString(QueryDetails));
+        HttpURLConnection con = (HttpURLConnection)myurl.openConnection();
+        con.setRequestMethod("GET");
+        con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+        con.setRequestProperty("User-Agent", twikeyClient.getUserAgent());
+        con.setRequestProperty("Authorization", twikeyClient.getSessionToken());
+
+        int responseCode = con.getResponseCode();
+        if (responseCode == 200) {
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
+                /* {
+                  "mndtId": "COREREC01",
+                  "url": "http://twikey.to/myComp/ToYG",
+                  "key": "ToYG"
+                } */
+                return new JSONObject(new JSONTokener(br));
+            }
+        } else {
+            String apiError = con.getHeaderField("ApiError");
+            throw new TwikeyClient.UserException(apiError);
+        }
+    }
+
+    public void cancel(String MandateNumber, String Message) throws IOException, TwikeyClient.UserException {
+        this.cancel(MandateNumber, Message, false);
+    }
+
+    /**
+     * TODO
+     */
+    public void cancel(String MandateNumber, String Message, boolean Notify) throws IOException, TwikeyClient.UserException {
+        URL myurl = twikeyClient.getUrl(String.format("/mandate?mndtId=%s&rsn=%s&notify=%s",
+                URLEncoder.encode(MandateNumber, StandardCharsets.UTF_8),
+                URLEncoder.encode(Message, StandardCharsets.UTF_8),
+                Notify));
+        HttpURLConnection con = (HttpURLConnection)myurl.openConnection();
+        con.setRequestMethod("DELETE");
+        con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+        con.setRequestProperty("User-Agent", twikeyClient.getUserAgent());
+        con.setRequestProperty("Authorization", twikeyClient.getSessionToken());
+
+        int responseCode = con.getResponseCode();
+        if (responseCode != 204) {
+            String apiError = con.getHeaderField("ApiError");
+            throw new TwikeyClient.UserException(apiError);
+        }
+    }
+
     /**
      * Get updates about all mandates (new/updated/cancelled)
      *

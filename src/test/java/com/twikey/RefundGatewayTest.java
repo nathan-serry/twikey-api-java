@@ -1,6 +1,5 @@
 package com.twikey;
 
-import com.twikey.modal.Account;
 import com.twikey.modal.DocumentRequests;
 import org.json.JSONObject;
 import org.junit.Assume;
@@ -20,7 +19,7 @@ public class RefundGatewayTest {
 
     private DocumentRequests.Customer customer;
 
-    private Account account;
+    private DocumentRequests.Account account;
 
     @Before
     public void createCustomer(){
@@ -36,7 +35,7 @@ public class RefundGatewayTest {
                 .setLang("nl")
                 .setMobile("32498665995");
 
-        account = new Account("NL46ABNA8910219718","ABNANL2A");
+        account = new DocumentRequests.Account("NL46ABNA8910219718","ABNANL2A");
 
         api = new TwikeyClient(apiKey)
                 .withTestEndpoint()
@@ -50,8 +49,8 @@ public class RefundGatewayTest {
         JSONObject beneficiaryResponse = api.refund().createBeneficiaryAccount(customer, account);
         assertTrue("Available",beneficiaryResponse.getBoolean("available"));
 
-        JSONObject refundResponse = api.refund().create(customer.getNumber(), Map.of(
-                "iban", account.getIban(),
+        JSONObject refundResponse = api.refund().create(customer.getCustomerNumber(), Map.of(
+                "iban", account.iban(),
                 "message", "Refund faulty item",
                 "ref", "My internal reference",
                 "amount", "10.99"
