@@ -1,7 +1,7 @@
 package com.twikey;
 
 import com.twikey.callback.DocumentCallback;
-import com.twikey.modal.Customer;
+import com.twikey.modal.DocumentRequests;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -106,7 +106,7 @@ public class DocumentGateway {
      * @throws IOException A network error occurred
      * @throws TwikeyClient.UserException A Twikey generated user error occurred
      */
-    public JSONObject sign(long ct, Customer customer, Map<String, String> mandateDetails) throws IOException, TwikeyClient.UserException {
+    public JSONObject sign(long ct, DocumentRequests.Customer customer, Map<String, String> mandateDetails) throws IOException, TwikeyClient.UserException {
         Map<String, String> params = new HashMap<>(mandateDetails);
         params.put("ct", String.valueOf(ct));
         if (customer != null) {

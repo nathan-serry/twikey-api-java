@@ -1,7 +1,6 @@
 package com.twikey;
 
 import com.twikey.callback.DocumentCallback;
-import com.twikey.modal.Customer;
 import com.twikey.modal.DocumentRequests;
 import org.json.JSONObject;
 import org.junit.Assume;
@@ -21,13 +20,13 @@ public class DocumentGatewayTest {
 
     private final String ct = System.getenv("CT"); // found @ https://www.twikey.com/r/admin#/c/template
 
-    private Customer customer;
+    private DocumentRequests.Customer customer;
 
     private TwikeyClient api;
 
     @Before
     public void createCustomer() {
-        customer = new Customer()
+        customer = new DocumentRequests.Customer()
                 .setNumber("customerNum123")
                 .setEmail("no-reply@example.com")
                 .setFirstname("Twikey")

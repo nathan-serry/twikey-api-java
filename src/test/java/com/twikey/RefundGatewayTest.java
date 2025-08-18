@@ -1,7 +1,7 @@
 package com.twikey;
 
 import com.twikey.modal.Account;
-import com.twikey.modal.Customer;
+import com.twikey.modal.DocumentRequests;
 import org.json.JSONObject;
 import org.junit.Assume;
 import org.junit.Before;
@@ -18,13 +18,13 @@ public class RefundGatewayTest {
 
     private TwikeyClient api;
 
-    private Customer customer;
+    private DocumentRequests.Customer customer;
 
     private Account account;
 
     @Before
     public void createCustomer(){
-        customer = new Customer()
+        customer = new DocumentRequests.Customer()
                 .setNumber("customerNum123")
                 .setEmail("no-reply@example.com")
                 .setFirstname("Twikey")

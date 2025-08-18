@@ -1,7 +1,7 @@
 package com.twikey;
 
 import com.twikey.callback.PaylinkCallback;
-import com.twikey.modal.Customer;
+import com.twikey.modal.DocumentRequests;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -45,7 +45,7 @@ public class PaylinkGateway {
      * @throws IOException   When no connection could be made
      * @throws com.twikey.TwikeyClient.UserException When Twikey returns a user error (400)
      */
-    public JSONObject create(long ct, Customer customer, Map<String, String> linkDetails) throws IOException, TwikeyClient.UserException {
+    public JSONObject create(long ct, DocumentRequests.Customer customer, Map<String, String> linkDetails) throws IOException, TwikeyClient.UserException {
         Map<String, String> params = new HashMap<>(linkDetails);
         params.put("ct", String.valueOf(ct));
         if (customer != null) {

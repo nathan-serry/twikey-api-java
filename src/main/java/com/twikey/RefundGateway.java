@@ -2,7 +2,7 @@ package com.twikey;
 
 import com.twikey.callback.RefundCallback;
 import com.twikey.modal.Account;
-import com.twikey.modal.Customer;
+import com.twikey.modal.DocumentRequests;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -100,7 +100,7 @@ public class RefundGateway {
      * @throws IOException   When no connection could be made
      * @throws com.twikey.TwikeyClient.UserException When Twikey returns a user error (400)
      */
-    public JSONObject createBeneficiaryAccount(Customer customer, Account account) throws IOException, TwikeyClient.UserException {
+    public JSONObject createBeneficiaryAccount(DocumentRequests.Customer customer, Account account) throws IOException, TwikeyClient.UserException {
         Map<String, String> params = new HashMap<>(customer.asFormParameters());
         params.put("iban",account.getIban());
         params.put("bic",account.getBic());
