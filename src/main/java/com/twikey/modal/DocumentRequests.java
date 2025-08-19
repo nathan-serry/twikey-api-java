@@ -21,7 +21,6 @@ public interface DocumentRequests {
     record Account(String iban, String bic) {
     }
 
-
     /**
      * Customer represents a person or company for whom a mandate or invitation
      * will be created in Twikey.
@@ -92,7 +91,6 @@ public interface DocumentRequests {
             return params;
         }
     }
-
 
     /**
      * InviteRequest holds the full set of fields that can be used
@@ -422,7 +420,6 @@ public interface DocumentRequests {
         }
     }
 
-
     /**
      * MandateQuery represents a search request for mandates in the Twikey API.
      * <p>
@@ -486,7 +483,6 @@ public interface DocumentRequests {
         }
     }
 
-
     /**
      * MandateDetailRequest represents a request to fetch details of a specific mandate in the Twikey API.
      * <p>
@@ -520,4 +516,214 @@ public interface DocumentRequests {
             return this;
         }
     }
+
+    /**
+     * UpdateMandateRequest holds the set of fields that can be used
+     * to update mandate details via the Twikey API.
+     *
+     * <p>Attributes:</p>
+     * <ul>
+     *   <li>mndtId (String, required): Mandate reference.</li>
+     *   <li>ct (Long): Move mandate to a different template ID (same type).</li>
+     *   <li>state (String): Mandate state ("active" or "passive").</li>
+     *   <li>mobile (String): Customer's mobile number (E.164 format recommended).</li>
+     *   <li>iban (String): Debtor's IBAN.</li>
+     *   <li>bic (String): Debtor's BIC code (auto-generated from IBAN if omitted).</li>
+     *   <li>customerNumber (String): Customer number (can move mandate to another customer).</li>
+     *   <li>email (String): Email address of debtor (only include if changed).</li>
+     *   <li>firstname, lastname (String): Debtor's personal names.</li>
+     *   <li>companyName (String): Company name (always updated on mandate, not owner).</li>
+     *   <li>coc (String): Enterprise number (only if companyName also changes).</li>
+     *   <li>l (String): Language on the mandate (ISO-2).</li>
+     *   <li>address, city, zip, country (String): Full address block (all must be included if one is updated).</li>
+     * </ul>
+     *
+     * <p>Notes:</p>
+     * <ul>
+     *   <li>Company name and language are updated on the mandate itself, not the owner.</li>
+     *   <li>Mobile number and email are updated both on mandate and customer.</li>
+     *   <li>For B2B mandates: iban cannot be updated once signed.</li>
+     * </ul>
+     */
+    class UpdateMandateRequest {
+        private final String mndtId;
+        private final Customer customer;
+        private final Account account;
+
+        private Long ct;
+        private String state, email, firstname, lastname, companyName, coc, l;
+        private String address, city, zip, country;
+        private String customerNumber;
+        private String mobile;
+
+        /**
+         * @param mndtId Mandate reference (required)
+         * @param customer Optional customer object (can be null)
+         * @param account Optional account object (can be null)
+         */
+        public UpdateMandateRequest(String mndtId, Customer customer, Account account) {
+            this.mndtId = mndtId;
+            this.customer = customer;
+            this.account = account;
+        }
+
+        public UpdateMandateRequest(String mndtId, Customer customer) {
+            this(mndtId, customer, null);
+        }
+
+        public UpdateMandateRequest(String mndtId) {
+            this(mndtId, null, null);
+        }
+
+        /**
+         * Convert this request to a flat Map<String,String> suitable for the API.
+         */
+        public Map<String, String> toRequest() {
+            Map<String, String> result = new HashMap<>();
+            result.put("mndtId", mndtId);
+            putIfNotNull(result, "ct", ct);
+            putIfNotNull(result, "state", state);
+
+            if (account != null) {
+                putIfNotNull(result, "iban", account.iban());
+                putIfNotNull(result, "bic", account.bic());
+            }
+            if (customer != null) {
+                putIfNotNull(result, "customerNumber", customer.getCustomerNumber());
+                putIfNotNull(result, "email", customer.getEmail());
+                putIfNotNull(result, "firstname", customer.getFirstname());
+                putIfNotNull(result, "lastname", customer.getLastname());
+                putIfNotNull(result, "mobile", customer.getMobile());
+                putIfNotNull(result, "address", customer.getStreet());
+                putIfNotNull(result, "city", customer.getCity());
+                putIfNotNull(result, "zip", customer.getZip());
+                putIfNotNull(result, "country", customer.getCountry());
+                putIfNotNull(result, "companyName", customer.getCompanyName());
+                putIfNotNull(result, "coc", customer.getCoc());
+            }
+
+            putIfNotNull(result, "email", email);
+            putIfNotNull(result, "firstname", firstname);
+            putIfNotNull(result, "lastname", lastname);
+            putIfNotNull(result, "companyName", companyName);
+            putIfNotNull(result, "coc", coc);
+            putIfNotNull(result, "l", l);
+            putIfNotNull(result, "address", address);
+            putIfNotNull(result, "city", city);
+            putIfNotNull(result, "zip", zip);
+            putIfNotNull(result, "country", country);
+            putIfNotNull(result, "customerNumber", customerNumber);
+            putIfNotNull(result, "mobile", mobile);
+
+            return result;
+        }
+
+        public UpdateMandateRequest setCt(Long ct) {
+            this.ct = ct;
+            return this;
+        }
+
+        public UpdateMandateRequest setState(String state) {
+            this.state = state;
+            return this;
+        }
+
+        public UpdateMandateRequest setEmail(String email) {
+            this.email = email;
+            return this;
+        }
+
+        public UpdateMandateRequest setFirstname(String firstname) {
+            this.firstname = firstname;
+            return this;
+        }
+
+        public UpdateMandateRequest setLastname(String lastname) {
+            this.lastname = lastname;
+            return this;
+        }
+
+        public UpdateMandateRequest setCompanyName(String companyName) {
+            this.companyName = companyName;
+            return this;
+        }
+
+        public UpdateMandateRequest setCoc(String coc) {
+            this.coc = coc;
+            return this;
+        }
+
+        public UpdateMandateRequest setLang(String l) {
+            this.l = l;
+            return this;
+        }
+
+        public UpdateMandateRequest setAddress(String address) {
+            this.address = address;
+            return this;
+        }
+
+        public UpdateMandateRequest setCity(String city) {
+            this.city = city;
+            return this;
+        }
+
+        public UpdateMandateRequest setZip(String zip) {
+            this.zip = zip;
+            return this;
+        }
+
+        public UpdateMandateRequest setCountry(String country) {
+            this.country = country;
+            return this;
+        }
+
+        public UpdateMandateRequest setCustomerNumber(String customerNumber) {
+            this.customerNumber = customerNumber;
+            return this;
+        }
+
+        public UpdateMandateRequest setMobile(String mobile) {
+            this.mobile = mobile;
+            return this;
+        }
+    }
+
+    /**
+     * UploadPdfRequest holds the set of fields required to upload
+     * an existing mandate PDF to the Twikey API.
+     *
+     * <p>Attributes:</p>
+     * <ul>
+     *   <li>mndtId (String, required): Mandate reference.</li>
+     *   <li>pdfPath (String, required): Path to the PDF file on disk.</li>
+     *   <li>bankSignature (Boolean, optional): Whether the bank signature is included.
+     *       Defaults to true if not provided.</li>
+     * </ul>
+     *
+     * <p>Notes:</p>
+     * <ul>
+     *   <li>The provided PDF will set the mandate state to "signed".</li>
+     *   <li>For B2B mandates, the <code>bankSignature</code> parameter determines
+     *       whether it will be offered to the bank (Twikey-affiliated banks only).</li>
+     * </ul>
+     */
+    record UploadPdfRequest(String mndtId,String pdfPath,boolean bankSignature) {
+
+        /**
+         * @param mndtId   Mandate reference (required).
+         * @param pdfPath  Path to the PDF file to be uploaded (required).
+         */
+        public UploadPdfRequest(String mndtId, String pdfPath) {
+            this(mndtId,pdfPath,false);
+            if (mndtId == null || mndtId.isEmpty()) {
+                throw new IllegalArgumentException("mndtId is required");
+            }
+            if (pdfPath == null || pdfPath.isEmpty()) {
+                throw new IllegalArgumentException("pdfPath is required");
+            }
+        }
+    }
+
+
 }

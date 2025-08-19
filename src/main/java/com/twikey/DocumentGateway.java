@@ -7,12 +7,15 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 
 import java.io.*;
+import java.io.FileReader;
+import java.io.BufferedReader;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,6 +27,7 @@ import static java.time.temporal.ChronoUnit.SECONDS;
 
 public class DocumentGateway {
 
+    public static final String FORM_URLENCODED = "application/x-www-form-urlencoded";
     private final TwikeyClient twikeyClient;
 
     protected DocumentGateway(TwikeyClient twikeyClient) {
@@ -49,7 +53,7 @@ public class DocumentGateway {
      *
      * @param invite Class converted to map containing any of the parameters in the above table
      * @throws IOException   When no connection could be made
-     * @throws com.twikey.TwikeyClient.UserException When Twikey returns a user error (400)
+     * @throws TwikeyClient.UserException When Twikey returns a user error (400)
      * @return Url to redirect the customer to or to send in an email
      * @throws IOException A network error occurred
      * @throws TwikeyClient.UserException A Twikey generated user error occurred
@@ -60,7 +64,7 @@ public class DocumentGateway {
         URL myurl = twikeyClient.getUrl("/invite");
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(myurl.toString()))
-                .header("Content-Type", "application/x-www-form-urlencoded")
+                .header("Content-Type", FORM_URLENCODED)
                 .header("User-Agent", twikeyClient.getUserAgent())
                 .header("Authorization", twikeyClient.getSessionToken())
                 .POST(HttpRequest.BodyPublishers.ofString(getPostDataString(requestMap)))
@@ -104,7 +108,7 @@ public class DocumentGateway {
         URL myurl = twikeyClient.getUrl("/sign");
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(myurl.toString()))
-                .header("Content-Type", "application/x-www-form-urlencoded")
+                .header("Content-Type", FORM_URLENCODED)
                 .header("User-Agent", twikeyClient.getUserAgent())
                 .header("Authorization", twikeyClient.getSessionToken())
                 .POST(HttpRequest.BodyPublishers.ofString(getPostDataString(requestMap)))
@@ -136,7 +140,7 @@ public class DocumentGateway {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(myurl.toString()))
                 .timeout(Duration.of(10, SECONDS))
-                .header("Content-Type", "application/x-www-form-urlencoded")
+                .header("Content-Type", FORM_URLENCODED)
                 .header("User-Agent", twikeyClient.getUserAgent())
                 .header("Authorization", twikeyClient.getSessionToken())
                 .POST(HttpRequest.BodyPublishers.ofString(getPostDataString(requestMap)))
@@ -159,7 +163,7 @@ public class DocumentGateway {
         URL myurl = twikeyClient.getUrl("/mandate/query?"+getPostDataString(requestMap));
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(myurl.toString()))
-                .headers("Content-Type", "application/x-www-form-urlencoded")
+                .headers("Content-Type", FORM_URLENCODED)
                 .headers("User-Agent", twikeyClient.getUserAgent())
                 .headers("Authorization", twikeyClient.getSessionToken())
                 .GET()
@@ -190,7 +194,7 @@ public class DocumentGateway {
                 notify));
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(myurl.toString()))
-                .header("Content-Type", "application/x-www-form-urlencoded")
+                .header("Content-Type", FORM_URLENCODED)
                 .header("User-Agent", twikeyClient.getUserAgent())
                 .header("Authorization", twikeyClient.getSessionToken())
                 .DELETE()
@@ -213,7 +217,7 @@ public class DocumentGateway {
         URL myurl = twikeyClient.getUrl("/mandate/detail?" + getPostDataString(requestMap));
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(myurl.toString()))
-                .headers("Content-Type", "application/x-www-form-urlencoded")
+                .headers("Content-Type", FORM_URLENCODED)
                 .headers("User-Agent", twikeyClient.getUserAgent())
                 .headers("Authorization", twikeyClient.getSessionToken())
                 .GET()
@@ -222,6 +226,101 @@ public class DocumentGateway {
         if (response.statusCode() == 200) {
             return new JSONObject(new JSONTokener(response.body()));
         } else {
+            String apiError = response.headers()
+                    .firstValue("apierror")
+                    .orElse(null);
+            throw new TwikeyClient.UserException(apiError);
+        }
+    }
+
+    /**
+     * TODO
+     */
+    public void update(DocumentRequests.UpdateMandateRequest update) throws IOException, TwikeyClient.UserException, InterruptedException {
+        Map<String, String> requestMap = update.toRequest();
+        HttpClient client = HttpClient.newHttpClient();
+        URL myurl = twikeyClient.getUrl("/mandate/update");
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(myurl.toString()))
+                .timeout(Duration.of(10, SECONDS))
+                .header("Content-Type", FORM_URLENCODED)
+                .header("User-Agent", twikeyClient.getUserAgent())
+                .header("Authorization", twikeyClient.getSessionToken())
+                .POST(HttpRequest.BodyPublishers.ofString(getPostDataString(requestMap)))
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 204) {
+            String apiError = response.headers()
+                    .firstValue("apierror")
+                    .orElse(null);
+            throw new TwikeyClient.UserException(apiError);
+        }
+    }
+
+    /**
+     * TODO
+     */
+    public JSONObject customerAccess(String mandateNumber) throws IOException, TwikeyClient.UserException, InterruptedException {
+        HttpClient client = HttpClient.newHttpClient();
+        URL myurl = twikeyClient.getUrl("/customeraccess");
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(myurl.toString()))
+                .header("Content-Type", FORM_URLENCODED)
+                .header("User-Agent", twikeyClient.getUserAgent())
+                .header("Authorization", twikeyClient.getSessionToken())
+                .POST(HttpRequest.BodyPublishers.ofString("mndtId=%s".formatted(mandateNumber)))
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() == 200) {
+            return new JSONObject(new JSONTokener(response.body()));
+        } else {
+            String apiError = response.headers()
+                    .firstValue("apierror")
+                    .orElse(null);
+            throw new TwikeyClient.UserException(apiError);
+        }
+    }
+
+    /**
+     * TODO
+     */
+    public JSONObject retrievePdf(String mandateNumber) throws IOException, TwikeyClient.UserException, InterruptedException {
+        HttpClient client = HttpClient.newHttpClient();
+        URL myurl = twikeyClient.getUrl("/mandate/pdf?mndtId=" + mandateNumber);
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(myurl.toString()))
+                .headers("Content-Type", FORM_URLENCODED)
+                .headers("User-Agent", twikeyClient.getUserAgent())
+                .headers("Authorization", twikeyClient.getSessionToken())
+                .GET()
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() == 200) {
+            return new JSONObject(new JSONTokener(response.body()));
+        } else {
+            String apiError = response.headers()
+                    .firstValue("apierror")
+                    .orElse(null);
+            throw new TwikeyClient.UserException(apiError);
+        }
+    }
+
+    /**
+     * TODO
+     */
+    public void uploadPdf(DocumentRequests.UploadPdfRequest pdfRequest) throws IOException, TwikeyClient.UserException, InterruptedException {
+        URL myurl = twikeyClient.getUrl("/mandate/pdf?mndtId=%s&bankSignature=%s".formatted(pdfRequest.mndtId(), pdfRequest.bankSignature()));
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(myurl.toString()))
+                .headers("Content-Type", FORM_URLENCODED)
+                .headers("User-Agent", twikeyClient.getUserAgent())
+                .headers("Authorization", twikeyClient.getSessionToken())
+                .POST(HttpRequest.BodyPublishers.ofFile(Path.of(pdfRequest.pdfPath())))
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
             String apiError = response.headers()
                     .firstValue("apierror")
                     .orElse(null);
@@ -241,7 +340,7 @@ public class DocumentGateway {
         boolean isEmpty;
         do{
             HttpURLConnection con = (HttpURLConnection) myurl.openConnection();
-            con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            con.setRequestProperty("Content-Type", FORM_URLENCODED);
             con.setRequestProperty("User-Agent", twikeyClient.getUserAgent());
             con.setRequestProperty("Authorization", twikeyClient.getSessionToken());
 
