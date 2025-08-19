@@ -321,7 +321,9 @@ public interface DocumentRequests {
         }
     }
 
-
+    /**
+     * TODO
+     */
     class SignRequest extends InviteRequest<SignRequest> {
         private String method;
         private String digsig;
@@ -385,7 +387,9 @@ public interface DocumentRequests {
         }
     }
 
-
+    /**
+     * TODO
+     */
     class MandateActionRequest {
         private final String mandateNumber;
         private final String type;
@@ -483,5 +487,37 @@ public interface DocumentRequests {
     }
 
 
+    /**
+     * MandateDetailRequest represents a request to fetch details of a specific mandate in the Twikey API.
+     * <p>
+     * This class allows retrieving mandate details by mandate reference (mndtId).
+     * Optionally, the request can include non-signed states by setting `force` to true.
+     * <p>
+     */
+    class MandateDetailRequest {
+        private final String mandateNumber;
+        private Boolean force;
 
+        public MandateDetailRequest(String mandateNumber) {
+            this.mandateNumber = mandateNumber;
+            this.force = false;
+        }
+
+        /**
+         * Converts the detail request into a Map suitable for GET query parameters.
+         *
+         * @return Map of non-null query parameters
+         */
+        public Map<String, String> toRequest() {
+            Map<String, String> params = new HashMap<>();
+            putIfNotNull(params, "mndtId", mandateNumber);
+            params.put("force", String.valueOf(force)); // always include, default false
+            return params;
+        }
+
+        public MandateDetailRequest setForce(boolean force) {
+            this.force = force;
+            return this;
+        }
+    }
 }
