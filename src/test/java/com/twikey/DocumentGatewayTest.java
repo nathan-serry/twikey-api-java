@@ -2,6 +2,7 @@ package com.twikey;
 
 import com.twikey.callback.DocumentCallback;
 import com.twikey.modal.DocumentRequests;
+import com.twikey.modal.DocumentResponse;
 import org.json.JSONObject;
 import org.junit.Assume;
 import org.junit.Before;
@@ -10,6 +11,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.List;
 
 import static com.twikey.modal.DocumentRequests.*;
 import static org.junit.Assert.assertNotNull;
@@ -72,8 +74,7 @@ public class DocumentGatewayTest {
     @Test
     public void testSignMandate() throws IOException, TwikeyClient.UserException, InterruptedException {
         Assume.assumeTrue("APIKey and CT are set", apiKey != null && ct != null);
-        SignRequest invite = new SignRequest(Long.parseLong(ct), customer, account)
-                .setMethod("import")
+        SignRequest invite = new SignRequest(Long.parseLong(ct), SignRequest.SignMethod.IMPORT, customer, account)
                 .setForceCheck(true)
                 .setReminderDays(5);
         JSONObject response = api.document().sign(invite);
@@ -83,26 +84,26 @@ public class DocumentGatewayTest {
     @Test
     public void testAction() throws IOException, TwikeyClient.UserException, InterruptedException {
         Assume.assumeTrue("APIKey is set", apiKey != null);
-        MandateActionRequest action = new MandateActionRequest("reminder", "CORERECURRENTNL18166")
+        MandateActionRequest action = new MandateActionRequest(MandateActionRequest.MandateActionType.REMINDER, "CORERECURRENTNL18166")
                 .setReminder(1);
         api.document().action(action);
     }
 
     @Test
-    public void testQuery() throws IOException, TwikeyClient.UserException, InterruptedException {
+    public void testQuery() throws Exception, TwikeyClient.UserException {
         Assume.assumeTrue("APIKey is set", apiKey != null);
         MandateQuery action = MandateQuery
-                .fromCustomerNumber("67cb4aa4-5ebe-4126-bb76-d81b8c788ac1")
-                .withIban("NL46ABNA8910219718");
-        JSONObject response = api.document().query(action);
-        assertNotNull("Contracts", response.getJSONArray("Contracts"));
+                .fromCustomerNumber("customer123")
+                .withIban("BE51561419613262");
+        List<DocumentResponse.Document> response = api.document().query(action);
+//        assertNotNull("Contracts", response.getJSONArray("Contracts"));
+        System.out.println("Response: " + response);
     }
 
     @Test
     public void testCancel() throws IOException, TwikeyClient.UserException, InterruptedException {
         Assume.assumeTrue("APIKey and CT are set", apiKey != null && ct != null);
-        SignRequest invite = new SignRequest(Long.parseLong(ct), customer, account)
-                .setMethod("import")
+        SignRequest invite = new SignRequest(Long.parseLong(ct), SignRequest.SignMethod.IMPORT, customer, account)
                 .setForceCheck(true)
                 .setReminderDays(5);
         JSONObject response = api.document().sign(invite);
@@ -112,12 +113,12 @@ public class DocumentGatewayTest {
     }
 
     @Test
-    public void testFetch() throws IOException, TwikeyClient.UserException, InterruptedException {
+    public void testFetch() throws Exception, TwikeyClient.UserException {
         Assume.assumeTrue("APIKey is set", apiKey != null);
         MandateDetailRequest fetch = new MandateDetailRequest("CORERECURRENTNL18166")
                 .setForce(true);
-        JSONObject response = api.document().fetch(fetch);
-        assertNotNull("Document Reference", response.getJSONObject("Mndt"));
+        DocumentResponse.Document response = api.document().fetch(fetch);
+        assertNotNull("Document Reference", response.getMandateNumber());
     }
 
     @Test
@@ -137,14 +138,14 @@ public class DocumentGatewayTest {
     @Test
     public void testRetrievePdf() throws IOException, TwikeyClient.UserException, InterruptedException {
         Assume.assumeTrue("APIKey is set", apiKey != null);
-        JSONObject response = api.document().retrievePdf("CORERECURRENTNL17192");
+        DocumentResponse.PdfResponse response = api.document().retrievePdf("CORERECURRENTNL17192");
+        System.out.println(response);
     }
 
     @Test
     public void testUploadPdf() throws IOException, TwikeyClient.UserException, InterruptedException {
         Assume.assumeTrue("APIKey and CT are set", apiKey != null && ct != null);
-        SignRequest invite = new SignRequest(Long.parseLong(ct), customer, account)
-                .setMethod("itsme")
+        SignRequest invite = new SignRequest(Long.parseLong(ct), SignRequest.SignMethod.ITSME, customer, account)
                 .setForceCheck(true)
                 .setReminderDays(5);
         JSONObject response = api.document().sign(invite);
@@ -154,7 +155,7 @@ public class DocumentGatewayTest {
     }
 
     @Test
-    public void getMandatesAndDetails() throws IOException, TwikeyClient.UserException {
+    public void getMandatesAndDetails() throws IOException, TwikeyClient.UserException, InterruptedException {
         Assume.assumeTrue("APIKey is set", apiKey != null);
         api.document().feed(new DocumentCallback() {
             @Override

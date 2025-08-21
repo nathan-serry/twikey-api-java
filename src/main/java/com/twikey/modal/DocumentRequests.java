@@ -323,28 +323,46 @@ public interface DocumentRequests {
      * TODO
      */
     class SignRequest extends InviteRequest<SignRequest> {
-        private String method;
+        private final SignMethod method;
         private String digsig;
         private String key;
         private String signDate;
         private String place;
         private Boolean bankSignature = true; // default true
 
-        public SignRequest(long ct) {
+        public enum SignMethod {
+            SMS("sms"),
+            DIGISIGN("digisign"),
+            IMPORT("import"),
+            ITSME("itsme"),
+            EMACHTIGING("emachtiging"),
+            PAPER("paper"),
+            IDIN("iDIN");
+
+            private final String value;
+
+            SignMethod(String value) {
+                this.value = value;
+            }
+
+            public String getValue() {
+                return value;
+            }
+        }
+
+        public SignRequest(long ct, SignMethod method) {
             super(ct);
-        }
-
-        public SignRequest(long ct, Customer customer) {
-            super(ct, customer);
-        }
-
-        public SignRequest(long ct, Customer customer, Account account) {
-            super(ct, customer, account);
-        }
-
-        public SignRequest setMethod(String method) {
             this.method = method;
-            return this;
+        }
+
+        public SignRequest(long ct, SignMethod method, Customer customer) {
+            super(ct, customer);
+            this.method = method;
+        }
+
+        public SignRequest(long ct, SignMethod method, Customer customer, Account account) {
+            super(ct, customer, account);
+            this.method = method;
         }
 
         public SignRequest setDigsig(String digsig) {
@@ -375,7 +393,7 @@ public interface DocumentRequests {
         @Override
         public Map<String, String> toRequest() {
             Map<String, String> result = super.toRequest();
-            putIfNotNull(result, "method", method);
+            putIfNotNull(result, "method", method.getValue());
             putIfNotNull(result, "digsig", digsig);
             putIfNotNull(result, "key", key);
             putIfNotNull(result, "signDate", signDate);
@@ -390,13 +408,31 @@ public interface DocumentRequests {
      */
     class MandateActionRequest {
         private final String mandateNumber;
-        private final String type;
+        private final MandateActionType type;
         private String reminder;
+
+        public enum MandateActionType {
+            INVITE("invite"),
+            REMINDER("reminder"),
+            ACCESS("access"),
+            AUTOMATIC_CHECK("automaticCheck"),
+            MANUAL_CHECK("manualCheck");
+
+            private final String value;
+
+            MandateActionType(String value) {
+                this.value = value;
+            }
+
+            public String getValue() {
+                return value;
+            }
+        }
 
         /**
          * @param type one of invite, reminder, access, automaticCheck, manualCheck
          */
-        public MandateActionRequest(String type,  String mandateNumber) {
+        public MandateActionRequest(MandateActionType type,  String mandateNumber) {
             this.type = type;
             this.mandateNumber = mandateNumber;
         }
@@ -411,7 +447,7 @@ public interface DocumentRequests {
 
         public Map<String, String> toRequest() {
             Map<String, String> map = new HashMap<>();
-            map.put("type", type);
+        map.put("type", type.getValue());
             map.put("mndtId", mandateNumber);
             if (reminder != null) {
                 map.put("reminder", reminder);

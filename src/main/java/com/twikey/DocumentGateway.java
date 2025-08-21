@@ -2,13 +2,12 @@ package com.twikey;
 
 import com.twikey.callback.DocumentCallback;
 import com.twikey.modal.DocumentRequests;
+import com.twikey.modal.DocumentResponse;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
 import java.io.*;
-import java.io.FileReader;
-import java.io.BufferedReader;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -17,7 +16,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -157,7 +156,7 @@ public class DocumentGateway {
     /**
      * TODO
      */
-    public JSONObject query(DocumentRequests.MandateQuery action) throws IOException, TwikeyClient.UserException, InterruptedException {
+    public List<DocumentResponse.Document> query(DocumentRequests.MandateQuery action) throws Exception, TwikeyClient.UserException {
         Map<String, String> requestMap = action.toRequest();
         HttpClient client = HttpClient.newHttpClient();
         URL myurl = twikeyClient.getUrl("/mandate/query?"+getPostDataString(requestMap));
@@ -169,8 +168,9 @@ public class DocumentGateway {
                 .GET()
                 .build();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        JSONObject json = new JSONObject(new JSONTokener(response.body()));
         if (response.statusCode() == 200) {
-            return new JSONObject(new JSONTokener(response.body()));
+            return DocumentResponse.Document.fromQuery(json);
         } else {
             String apiError = response.headers()
                     .firstValue("apierror")
@@ -211,7 +211,7 @@ public class DocumentGateway {
     /**
      * TODO
      */
-    public JSONObject fetch(DocumentRequests.MandateDetailRequest fetch) throws IOException, TwikeyClient.UserException, InterruptedException {
+    public DocumentResponse.Document fetch(DocumentRequests.MandateDetailRequest fetch) throws Exception, TwikeyClient.UserException {
         Map<String, String> requestMap = fetch.toRequest();
         HttpClient client = HttpClient.newHttpClient();
         URL myurl = twikeyClient.getUrl("/mandate/detail?" + getPostDataString(requestMap));
@@ -224,7 +224,13 @@ public class DocumentGateway {
                 .build();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() == 200) {
-            return new JSONObject(new JSONTokener(response.body()));
+            JSONObject json = new JSONObject(new JSONTokener(response.body()));
+            if (response.headers().firstValue("x-state").isPresent()) {
+                return DocumentResponse.Document.fromJson(json, response.headers().firstValue("x-state").get());
+            }
+            else  {
+                return DocumentResponse.Document.fromJson(json, null);
+            }
         } else {
             String apiError = response.headers()
                     .firstValue("apierror")
@@ -285,7 +291,7 @@ public class DocumentGateway {
     /**
      * TODO
      */
-    public JSONObject retrievePdf(String mandateNumber) throws IOException, TwikeyClient.UserException, InterruptedException {
+    public DocumentResponse.PdfResponse retrievePdf(String mandateNumber) throws IOException, TwikeyClient.UserException, InterruptedException {
         HttpClient client = HttpClient.newHttpClient();
         URL myurl = twikeyClient.getUrl("/mandate/pdf?mndtId=" + mandateNumber);
         HttpRequest request = HttpRequest.newBuilder()
@@ -295,9 +301,16 @@ public class DocumentGateway {
                 .headers("Authorization", twikeyClient.getSessionToken())
                 .GET()
                 .build();
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
         if (response.statusCode() == 200) {
-            return new JSONObject(new JSONTokener(response.body()));
+            String disposition = response.headers().firstValue("content-disposition").get();
+            String[] parts = disposition.split("=");
+            String filename = null;
+            if (parts.length == 2) {
+                filename = parts[1].trim().replace("\"", "");
+            }
+
+            return new DocumentResponse.PdfResponse(response.body(), filename);
         } else {
             String apiError = response.headers()
                     .firstValue("apierror")
@@ -335,32 +348,39 @@ public class DocumentGateway {
      * @throws IOException                When a network issue happened
      * @throws TwikeyClient.UserException When there was an issue while retrieving the mandates (eg. invalid apikey)
      */
-    public void feed(DocumentCallback mandateCallback) throws IOException, TwikeyClient.UserException {
+    public void feed(DocumentCallback mandateCallback) throws IOException, TwikeyClient.UserException, InterruptedException {
         URL myurl = twikeyClient.getUrl("/mandate");
         boolean isEmpty;
         do{
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(myurl.toString()))
+                    .headers("Content-Type", FORM_URLENCODED)
+                    .headers("User-Agent", twikeyClient.getUserAgent())
+                    .headers("Authorization", twikeyClient.getSessionToken())
+                    .GET()
+                    .build();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             HttpURLConnection con = (HttpURLConnection) myurl.openConnection();
             con.setRequestProperty("Content-Type", FORM_URLENCODED);
             con.setRequestProperty("User-Agent", twikeyClient.getUserAgent());
             con.setRequestProperty("Authorization", twikeyClient.getSessionToken());
+            int responseCode = response.statusCode();
 
-            int responseCode = con.getResponseCode();
             if (responseCode == 200) {
-                try (BufferedReader br = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
-                    JSONObject json = new JSONObject(new JSONTokener(br));
+                JSONObject json = new JSONObject(new JSONTokener(response.body()));
 
-                    JSONArray messagesArr = json.getJSONArray("Messages");
-                    isEmpty = messagesArr.isEmpty();
-                    if (!isEmpty) {
-                        for (int i = 0; i < messagesArr.length(); i++) {
-                            JSONObject obj = messagesArr.getJSONObject(i);
-                            if (obj.has("CxlRsn")) {
-                                mandateCallback.cancelledDocument(obj);
-                            } else if (obj.has("AmdmntRsn")) {
-                                mandateCallback.updatedDocument(obj);
-                            } else {
-                                mandateCallback.newDocument(obj);
-                            }
+                JSONArray messagesArr = json.getJSONArray("Messages");
+                isEmpty = messagesArr.isEmpty();
+                if (!isEmpty) {
+                    for (int i = 0; i < messagesArr.length(); i++) {
+                        JSONObject obj = messagesArr.getJSONObject(i);
+                        if (obj.has("CxlRsn")) {
+                            mandateCallback.cancelledDocument(obj);
+                        } else if (obj.has("AmdmntRsn")) {
+                            mandateCallback.updatedDocument(obj);
+                        } else {
+                            mandateCallback.newDocument(obj);
                         }
                     }
                 }
