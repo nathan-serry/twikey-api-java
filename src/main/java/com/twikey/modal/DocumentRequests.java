@@ -126,7 +126,7 @@ public interface DocumentRequests {
     class InviteRequest<T extends InviteRequest<T>> {
         private final long ct;
         private final Customer customer;
-        private Account account;
+        private final Account account;
         private String l, mandateNumber, contractNumber,
                 campaign, prefix, ed, token, document, transactionMessage, transactionRef,
                 plan, subscriptionStart, subscriptionRecurrence, subscriptionMessage, subscriptionRef;
@@ -320,7 +320,25 @@ public interface DocumentRequests {
     }
 
     /**
-     * TODO
+     * Request object for signing a mandate via the Twikey API.
+     * <p>
+     * This extends {@link InviteRequest} and adds the parameters required
+     * for the <code>/creditor/sign</code> endpoint. The sign method can vary,
+     * and depending on it, some additional fields become required:
+     *
+     * <ul>
+     *   <li><b>SMS</b>: requires the customer's mobile number</li>
+     *   <li><b>DIGISIGN</b>: requires {@link #digsig} (a base64-encoded PNG of a wet signature)</li>
+     *   <li><b>IMPORT</b>: requires {@link #signDate}. For B2B, {@link #bankSignature} can be set to false
+     *       if bank validation should be skipped.</li>
+     *   <li><b>ITSME</b>: initiates an itsme signing flow via redirect {@code url}</li>
+     *   <li><b>EMACHTIGING / IDIN</b>: requires BIC to be provided via the {@link Account}</li>
+     *   <li><b>PAPER</b>: allows previewing or sending a paper invite. Requires template options enabled.</li>
+     * </ul>
+     *
+     * <p>Common optional fields include the signing place, signing date,
+     * and mandate reference (see {@link InviteRequest}).</p>
+     *
      */
     class SignRequest extends InviteRequest<SignRequest> {
         private final SignMethod method;
@@ -404,7 +422,47 @@ public interface DocumentRequests {
     }
 
     /**
-     * TODO
+     * MandateActionRequest represents a request to perform an action on an existing mandate
+     * via the Twikey API.
+     *
+     * <p>The Twikey <code>/mandate/{mndtId}/action</code> endpoint allows you to
+     * trigger workflow-related actions such as resending an invitation, sending reminders,
+     * granting customer access, or toggling B2B validation checks.</p>
+     *
+     * <p>Attributes:</p>
+     * <ul>
+     *   <li><b>mandateNumber (String)</b>: The unique identifier (<code>mndtId</code>) of the mandate
+     *       on which the action will be performed (required).</li>
+     *   <li><b>type (MandateActionType)</b>: The type of action to perform (required).
+     *       Supported values:
+     *       <ul>
+     *         <li><code>INVITE</code>: Send a new mandate invitation email.</li>
+     *         <li><code>REMINDER</code>: Send a reminder email for an unsigned mandate.</li>
+     *         <li><code>ACCESS</code>: Grant the customer access to their mandate in the portal.</li>
+     *         <li><code>AUTOMATIC_CHECK</code>: Enable automatic validation for B2B mandates.</li>
+     *         <li><code>MANUAL_CHECK</code>: Disable automatic validation for B2B mandates (manual only).</li>
+     *       </ul>
+     *   </li>
+     *   <li><b>reminder (String)</b>: Optional. Only used when <code>type=REMINDER</code>.
+     *       Specifies which reminder to send (valid values: "1", "2", "3", "4").</li>
+     * </ul>
+     *
+     * <p>Usage example:</p>
+     * <pre>{@code
+     * MandateActionRequest request = new MandateActionRequest(
+     *         MandateActionType.REMINDER,
+     *         "MNDT12345"
+     *     ).setReminder(2);
+     *
+     * Map<String, String> payload = request.toRequest();
+     * }</pre>
+     *
+     * <p>The <code>toRequest()</code> method flattens this request into a
+     * <code>Map&lt;String,String&gt;</code> suitable for submission as query parameters
+     * or form data in the Twikey API call.</p>
+     *
+     * <p>Endpoint Reference:</p>
+     * POST https://api.twikey.com/creditor/mandate/{mndtId}/action
      */
     class MandateActionRequest {
         private final String mandateNumber;

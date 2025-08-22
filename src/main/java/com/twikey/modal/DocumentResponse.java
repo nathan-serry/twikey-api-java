@@ -39,7 +39,7 @@ public interface DocumentResponse {
 
         private String contractNumber;
 
-        private Map<String, String> supplementaryData = new HashMap<>();
+        private final Map<String, String> supplementaryData = new HashMap<>();
 
         // --- Getters ---
         public String getMandateNumber() { return mandateNumber; }
@@ -63,7 +63,7 @@ public interface DocumentResponse {
         public Map<String, String> getSupplementaryData() { return supplementaryData; }
 
         // --- Factory method to build from JSON ---
-        public static Document fromJson(JSONObject json, String state) throws Exception {
+        public static Document fromJson(JSONObject json, String state) {
             JSONObject mndt = json.getJSONObject("Mndt");
 
             Document resp = new Document();
@@ -85,7 +85,9 @@ public interface DocumentResponse {
             resp.debtorCity = addr.getString("TwnNm");
             resp.debtorZip = addr.getString("PstCd");
             resp.debtorCountry = addr.getString("Ctry");
-            resp.btwNummer = dbtr.getString("Id");
+            if (dbtr.has("Id")) {
+                resp.btwNummer = dbtr.getString("Id");
+            }
             resp.countryOfResidence = dbtr.getString("CtryOfRes");
             resp.debtorEmail = ctct.getString("EmailAdr");
             resp.customerNumber = ctct.getString("Othr");
@@ -111,7 +113,7 @@ public interface DocumentResponse {
             return resp;
         }
 
-        public static List<Document> fromQuery(JSONObject response) throws Exception{
+        public static List<Document> fromQuery(JSONObject response) {
             JSONArray contracts = response.getJSONArray("Contracts");
             List<Document> docs = new ArrayList<>();
             for (Object kvcontract : contracts) {
@@ -220,6 +222,71 @@ public interface DocumentResponse {
         @Override
         public String toString() {
             return "PdfResponse(filename='" + filename + "', size=" + content.length + " bytes)";
+        }
+    }
+
+    class MandateCreationResponse {
+        private String mandateNumber;
+        private String url;
+        private String key;
+
+        // --- Getters ---
+        public String getMandateNumber() { return mandateNumber; }
+        public String getUrl() { return url; }
+        public String getKey() { return key; }
+
+        // --- Factory method to build from JSON ---
+        public static MandateCreationResponse fromJson(String response) {
+            JSONObject json = new JSONObject(new JSONTokener(response));
+            MandateCreationResponse resp = new MandateCreationResponse();
+
+            // Handle "MndtId" or "mndtId" (different casing across endpoints)
+            if (json.has("MndtId")) {
+                resp.mandateNumber = json.getString("MndtId");
+            } else if (json.has("mndtId")) {
+                resp.mandateNumber = json.getString("mndtId");
+            }
+
+            resp.url = json.optString("url", null);
+            resp.key = json.optString("key", null); // only present for invite
+
+            return resp;
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            sb.append("Mandate Number : ").append(mandateNumber).append("\n");
+            sb.append("Url            : ").append(url).append("\n");
+            if (key != null) {
+                sb.append("Key            : ").append(key).append("\n");
+            }
+            return sb.toString();
+        }
+    }
+
+    class CustomerAccessResponse {
+        private String token;
+        private String url;
+
+        // --- Getters ---
+        public String getToken() { return token; }
+        public String getUrl() { return url; }
+
+        // --- Factory method to build from JSON ---
+        public static CustomerAccessResponse fromJson(JSONObject json) {
+            CustomerAccessResponse resp = new CustomerAccessResponse();
+            resp.token = json.optString("token", null);
+            resp.url = json.optString("url", null);
+            return resp;
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            sb.append("Token : ").append(token).append("\n");
+            sb.append("Url   : ").append(url).append("\n");
+            return sb.toString();
         }
     }
 }
