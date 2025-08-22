@@ -26,7 +26,7 @@ import static java.time.temporal.ChronoUnit.SECONDS;
 
 public class DocumentGateway {
 
-    public static final String FORM_URLENCODED = "application/x-www-form-urlencoded";
+    public static final String FORM_URLENCODED = "application/json";
     private final TwikeyClient twikeyClient;
 
     protected DocumentGateway(TwikeyClient twikeyClient) {

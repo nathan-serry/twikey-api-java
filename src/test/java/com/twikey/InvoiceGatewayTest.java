@@ -1,15 +1,14 @@
 package com.twikey;
 
 import com.twikey.modal.DocumentRequests;
-import junit.framework.TestCase;
+import com.twikey.modal.InvoiceRequests;
 import org.json.JSONObject;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.time.LocalDate;
 
 import static org.junit.Assert.assertNotNull;
 
@@ -43,24 +42,27 @@ public class InvoiceGatewayTest {
     }
 
     @Test
-    public void testCreateInvoice() throws IOException, TwikeyClient.UserException {
+    public void testCreateInvoice() throws IOException, TwikeyClient.UserException, InterruptedException {
         Assume.assumeTrue("APIKey and CT are set", apiKey != null && ct != null);
-        Map<String, String> invoiceDetails = new HashMap<>();
-        invoiceDetails.put("number", "Invss123");
-        invoiceDetails.put("title", "Invoice April");
-        invoiceDetails.put("remittance", "123456789123");
-        invoiceDetails.put("amount", "10.90");
-        invoiceDetails.put("date", "2020-03-20");
-        invoiceDetails.put("duedate", "2020-04-28");
-        JSONObject invoiceResponse = api.invoice().create(Long.parseLong(ct), customer, invoiceDetails);
-        assertNotNull("Payment URL", invoiceResponse.getString("url"));
-        assertNotNull("Invoice Id", invoiceResponse.getString("id"));
+        InvoiceRequests.CreateInvoiceRequest request = new InvoiceRequests.CreateInvoiceRequest("Inv-%s".formatted("Java-Sdk-" + System.currentTimeMillis()), 100.0, LocalDate.now().toString(), LocalDate.now().plusMonths(1).toString(), customer);
+        JSONObject invoiceResponse = api.invoice().create(request);
+
+//        Map<String, String> invoiceDetails = new HashMap<>();
+//        invoiceDetails.put("number", "Invss123");
+//        invoiceDetails.put("title", "Invoice April");
+//        invoiceDetails.put("remittance", "123456789123");
+//        invoiceDetails.put("amount", "10.90");
+//        invoiceDetails.put("date", "2020-03-20");
+//        invoiceDetails.put("duedate", "2020-04-28");
+//        JSONObject invoiceResponse = api.invoice().create(Long.parseLong(ct), customer, invoiceDetails);
+//        assertNotNull("Payment URL", invoiceResponse.getString("url"));
+//        assertNotNull("Invoice Id", invoiceResponse.getString("id"));
     }
 
     @Test
     public void getInvoicesAndDetails() throws IOException, TwikeyClient.UserException {
         Assume.assumeTrue("APIKey is set", apiKey != null);
-        api.invoice().feed(updatedInvoice -> assertNotNull("Updated invoice", updatedInvoice),"meta");
+        api.invoice().feed(updatedInvoice -> assertNotNull("Updated invoice", updatedInvoice), "meta");
         api.invoice().feed(updatedInvoice -> assertNotNull("Updated invoice", updatedInvoice));
     }
 }

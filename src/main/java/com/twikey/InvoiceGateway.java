@@ -2,6 +2,7 @@ package com.twikey;
 
 import com.twikey.callback.InvoiceCallback;
 import com.twikey.modal.DocumentRequests;
+import com.twikey.modal.InvoiceRequests;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -11,10 +12,16 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Map;
+
+import static com.twikey.TwikeyClient.getPostDataString;
 
 public class InvoiceGateway {
 
@@ -43,56 +50,68 @@ public class InvoiceGateway {
      * @throws IOException   When no connection could be made
      * @throws com.twikey.TwikeyClient.UserException When Twikey returns a user error (400)
      */
-    public JSONObject create(long ct, DocumentRequests.Customer customer, Map<String, String> invoiceDetails) throws IOException, TwikeyClient.UserException {
+    public JSONObject create(InvoiceRequests.CreateInvoiceRequest create) throws IOException, TwikeyClient.UserException, InterruptedException {
+        Map<String, String> requestMap = create.toRequest();
 
-        JSONObject customerAsJson = new JSONObject()
-                .put("customerNumber", customer.getCustomerNumber())
-                .put("email", customer.getEmail())
-                .put("firstname", customer.getFirstname())
-                .put("lastname", customer.getLastname())
-                .put("l", customer.getLang())
-                .put("address", customer.getStreet())
-                .put("city", customer.getCity())
-                .put("zip", customer.getZip())
-                .put("country", customer.getCountry())
-                .put("mobile", customer.getMobile());
+//        JSONObject customerAsJson = new JSONObject()
+//                .put("customerNumber", customer.getCustomerNumber())
+//                .put("email", customer.getEmail())
+//                .put("firstname", customer.getFirstname())
+//                .put("lastname", customer.getLastname())
+//                .put("l", customer.getLang())
+//                .put("address", customer.getStreet())
+//                .put("city", customer.getCity())
+//                .put("zip", customer.getZip())
+//                .put("country", customer.getCountry())
+//                .put("mobile", customer.getMobile());
 
-        if (customer.getCompanyName() != null) {
-            customerAsJson.put("companyName", customer.getCompanyName())
-                    .put("coc", customer.getCoc());
-        }
+//        if (customer.getCompanyName() != null) {
+//            customerAsJson.put("companyName", customer.getCompanyName())
+//                    .put("coc", customer.getCoc());
+//        }
 
-        JSONObject invoice = new JSONObject()
-                .put("customer", customerAsJson)
-                .put("date", invoiceDetails.getOrDefault("date", LocalDate.now().toString()))
-                .put("duedate", invoiceDetails.getOrDefault("duedate", LocalDate.now().plusMonths(1).toString()))
-                .put("ct", ct);
+//        JSONObject invoice = new JSONObject()
+//                .put("customer", customerAsJson)
+//                .put("date", invoiceDetails.getOrDefault("date", LocalDate.now().toString()))
+//                .put("duedate", invoiceDetails.getOrDefault("duedate", LocalDate.now().plusMonths(1).toString()))
+//                .put("ct", ct);
 
-        for (Map.Entry<String, String> entry : invoiceDetails.entrySet()) {
-            invoice.put(entry.getKey(), entry.getValue());
-        }
+//        for (Map.Entry<String, String> entry : invoiceDetails.entrySet()) {
+//            invoice.put(entry.getKey(), entry.getValue());
+//        }
 
+        HttpClient client = HttpClient.newHttpClient();
         URL myurl = twikeyClient.getUrl("/invoice");
-        HttpURLConnection con = (HttpURLConnection) myurl.openConnection();
-        con.setRequestMethod("POST");
-        con.setRequestProperty("Content-Type", "application/json");
-        con.setRequestProperty("User-Agent", twikeyClient.getUserAgent());
-        con.setRequestProperty("Authorization", twikeyClient.getSessionToken());
-        con.setDoOutput(true);
-        con.setDoInput(true);
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(myurl.toString()))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .header("User-Agent", twikeyClient.getUserAgent())
+                .header("Authorization", twikeyClient.getSessionToken())
+                .POST(HttpRequest.BodyPublishers.ofString(getPostDataString(requestMap)))
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-        try (DataOutputStream output = new DataOutputStream(con.getOutputStream())) {
-            output.writeBytes(invoice.toString());
-            output.flush();
-        }
-
-        int responseCode = con.getResponseCode();
-        if (responseCode == 200) {
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
-                return new JSONObject(new JSONTokener(br));
-            }
+//        URL myurl = twikeyClient.getUrl("/invoice");
+//        HttpURLConnection con = (HttpURLConnection) myurl.openConnection();
+//        con.setRequestMethod("POST");
+//        con.setRequestProperty("Content-Type", "application/json");
+//        con.setRequestProperty("User-Agent", twikeyClient.getUserAgent());
+//        con.setRequestProperty("Authorization", twikeyClient.getSessionToken());
+//        con.setDoOutput(true);
+//        con.setDoInput(true);
+//
+//        try (DataOutputStream output = new DataOutputStream(con.getOutputStream())) {
+//            output.writeBytes(invoice.toString());
+//            output.flush();
+//        }
+//
+//        int responseCode = con.getResponseCode();
+        if (response.statusCode() == 200) {
+                return new JSONObject(new JSONTokener(response.body()).toString());
         } else {
-            String apiError = con.getHeaderField("ApiError");
+            String apiError = response.headers()
+                    .firstValue("ApiError")
+                    .orElse(null);
             throw new TwikeyClient.UserException(apiError);
         }
     }
