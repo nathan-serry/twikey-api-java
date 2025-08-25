@@ -2,6 +2,7 @@ package com.twikey;
 
 import com.twikey.callback.InvoiceCallback;
 import com.twikey.modal.InvoiceRequests;
+import com.twikey.modal.InvoiceResponse;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -45,7 +46,7 @@ public class InvoiceGateway {
      * @throws IOException   When no connection could be made
      * @throws com.twikey.TwikeyClient.UserException When Twikey returns a user error (400)
      */
-    public JSONObject create(InvoiceRequests.CreateInvoiceRequest create) throws IOException, TwikeyClient.UserException, InterruptedException {
+    public InvoiceResponse.Invoice create(InvoiceRequests.CreateInvoiceRequest create) throws IOException, TwikeyClient.UserException, InterruptedException {
         JSONObject requestMap = create.toRequest();
 
         HttpClient client = HttpClient.newHttpClient();
@@ -60,7 +61,8 @@ public class InvoiceGateway {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() == 200) {
-                return new JSONObject(new JSONTokener(response.body()));
+            JSONObject json = new JSONObject(new JSONTokener(response.body()));
+            return InvoiceResponse.Invoice.fromJson(json);
         } else {
             String apiError = response.headers()
                     .firstValue("ApiError")
@@ -72,7 +74,7 @@ public class InvoiceGateway {
     /**
      * TODO
      */
-    public JSONObject update(InvoiceRequests.UpdateInvoiceRequest update) throws IOException, TwikeyClient.UserException, InterruptedException {
+    public InvoiceResponse.Invoice update(InvoiceRequests.UpdateInvoiceRequest update) throws IOException, TwikeyClient.UserException, InterruptedException {
         JSONObject requestMap = update.toRequest();
 
         HttpClient client = HttpClient.newHttpClient();
@@ -87,7 +89,8 @@ public class InvoiceGateway {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() == 200) {
-                return new JSONObject(new JSONTokener(response.body()));
+            JSONObject json = new JSONObject(new JSONTokener(response.body()));
+            return InvoiceResponse.Invoice.fromJson(json);
         } else {
             String apiError = response.headers()
                     .firstValue("ApiError")
@@ -122,7 +125,7 @@ public class InvoiceGateway {
     /**
      * TODO
      */
-    public JSONObject details(InvoiceRequests.InvoiceDetailRequest details) throws IOException, TwikeyClient.UserException, InterruptedException {
+    public InvoiceResponse.Invoice details(InvoiceRequests.InvoiceDetailRequest details) throws IOException, TwikeyClient.UserException, InterruptedException {
         Map<String, String> params = details.toRequest();
 
         HttpClient client = HttpClient.newHttpClient();
@@ -137,7 +140,8 @@ public class InvoiceGateway {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() == 200) {
-            return new JSONObject(new JSONTokener(response.body()));
+            JSONObject json = new JSONObject(new JSONTokener(response.body()));
+            return InvoiceResponse.Invoice.fromJson(json);
         } else {
             String apiError = response.headers()
                     .firstValue("ApiError")
@@ -174,7 +178,7 @@ public class InvoiceGateway {
     /**
      * TODO
      */
-    public JSONObject UBL(InvoiceRequests.UblUploadRequest Ubl) throws IOException, TwikeyClient.UserException, InterruptedException {
+    public InvoiceResponse.Invoice UBL(InvoiceRequests.UblUploadRequest Ubl) throws IOException, TwikeyClient.UserException, InterruptedException {
         Map<String, String> headers = Ubl.toHeaders();
 
         HttpClient client = HttpClient.newHttpClient();
@@ -192,7 +196,8 @@ public class InvoiceGateway {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() == 200) {
-            return new JSONObject(new JSONTokener(response.body()));
+            JSONObject json = new JSONObject(new JSONTokener(response.body()));
+            return InvoiceResponse.Invoice.fromJson(json);
         } else {
             String apiError = response.headers()
                     .firstValue("ApiError")
