@@ -1,14 +1,12 @@
 package com.twikey;
 
 import com.twikey.callback.InvoiceCallback;
-import com.twikey.modal.DocumentRequests;
 import com.twikey.modal.InvoiceRequests;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
 import java.io.BufferedReader;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -17,8 +15,7 @@ import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.time.LocalDate;
-import java.util.Arrays;
+import java.nio.file.Path;
 import java.util.Map;
 
 import static com.twikey.TwikeyClient.getPostDataString;
@@ -32,9 +29,7 @@ public class InvoiceGateway {
     }
 
     /**
-     * @param ct             Template to use can be found @ https://www.twikey.com/r/admin#/c/template
-     * @param customer       Customer details
-     * @param invoiceDetails Details specific to the invoice
+     * @param create A map containing all the information to create that invoice
      * @return jsonobject <pre>{
      *                       "id": "fec44175-b4fe-414c-92aa-9d0a7dd0dbf2",
      *                       "number": "Inv20200001",
@@ -51,63 +46,21 @@ public class InvoiceGateway {
      * @throws com.twikey.TwikeyClient.UserException When Twikey returns a user error (400)
      */
     public JSONObject create(InvoiceRequests.CreateInvoiceRequest create) throws IOException, TwikeyClient.UserException, InterruptedException {
-        Map<String, String> requestMap = create.toRequest();
-
-//        JSONObject customerAsJson = new JSONObject()
-//                .put("customerNumber", customer.getCustomerNumber())
-//                .put("email", customer.getEmail())
-//                .put("firstname", customer.getFirstname())
-//                .put("lastname", customer.getLastname())
-//                .put("l", customer.getLang())
-//                .put("address", customer.getStreet())
-//                .put("city", customer.getCity())
-//                .put("zip", customer.getZip())
-//                .put("country", customer.getCountry())
-//                .put("mobile", customer.getMobile());
-
-//        if (customer.getCompanyName() != null) {
-//            customerAsJson.put("companyName", customer.getCompanyName())
-//                    .put("coc", customer.getCoc());
-//        }
-
-//        JSONObject invoice = new JSONObject()
-//                .put("customer", customerAsJson)
-//                .put("date", invoiceDetails.getOrDefault("date", LocalDate.now().toString()))
-//                .put("duedate", invoiceDetails.getOrDefault("duedate", LocalDate.now().plusMonths(1).toString()))
-//                .put("ct", ct);
-
-//        for (Map.Entry<String, String> entry : invoiceDetails.entrySet()) {
-//            invoice.put(entry.getKey(), entry.getValue());
-//        }
+        JSONObject requestMap = create.toRequest();
 
         HttpClient client = HttpClient.newHttpClient();
         URL myurl = twikeyClient.getUrl("/invoice");
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(myurl.toString()))
-                .header("Content-Type", "application/x-www-form-urlencoded")
+                .header("Content-Type", "application/json")
                 .header("User-Agent", twikeyClient.getUserAgent())
                 .header("Authorization", twikeyClient.getSessionToken())
-                .POST(HttpRequest.BodyPublishers.ofString(getPostDataString(requestMap)))
+                .POST(HttpRequest.BodyPublishers.ofString(String.valueOf(requestMap)))
                 .build();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-//        URL myurl = twikeyClient.getUrl("/invoice");
-//        HttpURLConnection con = (HttpURLConnection) myurl.openConnection();
-//        con.setRequestMethod("POST");
-//        con.setRequestProperty("Content-Type", "application/json");
-//        con.setRequestProperty("User-Agent", twikeyClient.getUserAgent());
-//        con.setRequestProperty("Authorization", twikeyClient.getSessionToken());
-//        con.setDoOutput(true);
-//        con.setDoInput(true);
-//
-//        try (DataOutputStream output = new DataOutputStream(con.getOutputStream())) {
-//            output.writeBytes(invoice.toString());
-//            output.flush();
-//        }
-//
-//        int responseCode = con.getResponseCode();
         if (response.statusCode() == 200) {
-                return new JSONObject(new JSONTokener(response.body()).toString());
+                return new JSONObject(new JSONTokener(response.body()));
         } else {
             String apiError = response.headers()
                     .firstValue("ApiError")
@@ -115,6 +68,184 @@ public class InvoiceGateway {
             throw new TwikeyClient.UserException(apiError);
         }
     }
+
+    /**
+     * TODO
+     */
+    public JSONObject update(InvoiceRequests.UpdateInvoiceRequest update) throws IOException, TwikeyClient.UserException, InterruptedException {
+        JSONObject requestMap = update.toRequest();
+
+        HttpClient client = HttpClient.newHttpClient();
+        URL myurl = twikeyClient.getUrl("/invoice/%s".formatted(requestMap.get("id")));
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(myurl.toString()))
+                .header("Content-Type", "application/json")
+                .header("User-Agent", twikeyClient.getUserAgent())
+                .header("Authorization", twikeyClient.getSessionToken())
+                .PUT(HttpRequest.BodyPublishers.ofString(String.valueOf(requestMap)))
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() == 200) {
+                return new JSONObject(new JSONTokener(response.body()));
+        } else {
+            String apiError = response.headers()
+                    .firstValue("ApiError")
+                    .orElse(null);
+            throw new TwikeyClient.UserException(apiError);
+        }
+    }
+
+    /**
+     * TODO
+     */
+    public void delete(String delete) throws IOException, TwikeyClient.UserException, InterruptedException {
+        HttpClient client = HttpClient.newHttpClient();
+        URL myurl = twikeyClient.getUrl("/invoice/%s".formatted(delete));
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(myurl.toString()))
+                .header("Content-Type", "application/json")
+                .header("User-Agent", twikeyClient.getUserAgent())
+                .header("Authorization", twikeyClient.getSessionToken())
+                .DELETE()
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() != 204) {
+            String apiError = response.headers()
+                    .firstValue("ApiError")
+                    .orElse(null);
+            throw new TwikeyClient.UserException(apiError);
+        }
+    }
+
+    /**
+     * TODO
+     */
+    public JSONObject details(InvoiceRequests.InvoiceDetailRequest details) throws IOException, TwikeyClient.UserException, InterruptedException {
+        Map<String, String> params = details.toRequest();
+
+        HttpClient client = HttpClient.newHttpClient();
+        URL myurl = twikeyClient.getUrl("/invoice/%s?%s".formatted(params.get("invoice"), params.get("include")));
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(myurl.toString()))
+                .header("Content-Type", "application/json")
+                .header("User-Agent", twikeyClient.getUserAgent())
+                .header("Authorization", twikeyClient.getSessionToken())
+                .GET()
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() == 200) {
+            return new JSONObject(new JSONTokener(response.body()));
+        } else {
+            String apiError = response.headers()
+                    .firstValue("ApiError")
+                    .orElse(null);
+            throw new TwikeyClient.UserException(apiError);
+        }
+    }
+
+    /**
+     * TODO
+     */
+    public void action(InvoiceRequests.InvoiceActionRequest action) throws IOException, TwikeyClient.UserException, InterruptedException {
+        Map<String, String> params = action.toRequest();
+
+        HttpClient client = HttpClient.newHttpClient();
+        URL myurl = twikeyClient.getUrl("/invoice/%s/action".formatted(params.get("id")));
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(myurl.toString()))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .header("User-Agent", twikeyClient.getUserAgent())
+                .header("Authorization", twikeyClient.getSessionToken())
+                .POST(HttpRequest.BodyPublishers.ofString(getPostDataString(params)))
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() != 204) {
+            String apiError = response.headers()
+                    .firstValue("ApiError")
+                    .orElse(null);
+            throw new TwikeyClient.UserException(apiError);
+        }
+    }
+
+    /**
+     * TODO
+     */
+    public JSONObject UBL(InvoiceRequests.UblUploadRequest Ubl) throws IOException, TwikeyClient.UserException, InterruptedException {
+        Map<String, String> headers = Ubl.toHeaders();
+
+        HttpClient client = HttpClient.newHttpClient();
+        URL myurl = twikeyClient.getUrl("/invoice/ubl");
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(URI.create(myurl.toString()))
+                .header("User-Agent", twikeyClient.getUserAgent())
+                .header("Authorization", twikeyClient.getSessionToken())
+                .POST(HttpRequest.BodyPublishers.ofFile(Path.of(Ubl.getXmlPath())));
+                for (Map.Entry<String, String> entry : headers.entrySet()) {
+                            builder.header(entry.getKey(), entry.getValue());
+                        }
+
+        HttpRequest request = builder.build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() == 200) {
+            return new JSONObject(new JSONTokener(response.body()));
+        } else {
+            String apiError = response.headers()
+                    .firstValue("ApiError")
+                    .orElse(null);
+            throw new TwikeyClient.UserException(apiError);
+        }
+    }
+
+    public JSONObject createBatch(InvoiceRequests.BulkInvoiceRequest batch) throws IOException, TwikeyClient.UserException, InterruptedException {
+        JSONArray jsonArray = batch.toRequest();
+        HttpClient client = HttpClient.newHttpClient();
+        URL myurl = twikeyClient.getUrl("/invoice/bulk");
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(myurl.toString()))
+                .header("Content-Type", "application/json")
+                .header("User-Agent", twikeyClient.getUserAgent())
+                .header("Authorization", twikeyClient.getSessionToken())
+                .POST(HttpRequest.BodyPublishers.ofString(String.valueOf(jsonArray)))
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() == 200) {
+            return new JSONObject(new JSONTokener(response.body()));
+        }  else {
+            String apiError = response.headers()
+                    .firstValue("ApiError")
+                    .orElse(null);
+            throw new TwikeyClient.UserException(apiError);
+        }
+    }
+
+    public JSONObject batchDetails(String batchId) throws IOException, TwikeyClient.UserException, InterruptedException {
+        HttpClient client = HttpClient.newHttpClient();
+        URL myurl = twikeyClient.getUrl("/invoice/bulk?batchId=%s".formatted(batchId));
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(myurl.toString()))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .header("User-Agent", twikeyClient.getUserAgent())
+                .header("Authorization", twikeyClient.getSessionToken())
+                .GET()
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() == 200) {
+            return new JSONObject(new JSONTokener(response.body()));
+        }  else {
+            String apiError = response.headers()
+                    .firstValue("ApiError")
+                    .orElse(null);
+            throw new TwikeyClient.UserException(apiError);
+        }
+    }
+
 
     /**
      * Get updates about all mandates (new/updated/cancelled)

@@ -109,7 +109,7 @@ public class DocumentGateway {
         URL myurl = twikeyClient.getUrl("/sign");
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(myurl.toString()))
-                .header("Content-Type", FORM_URLENCODED)
+                .header("Content-Type", "application/x-www-form-urlencoded")
                 .header("User-Agent", twikeyClient.getUserAgent())
                 .header("Authorization", twikeyClient.getSessionToken())
                 .POST(HttpRequest.BodyPublishers.ofString(getPostDataString(requestMap)))
@@ -439,7 +439,7 @@ public class DocumentGateway {
         HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(myurl.toString()))
-                .headers("Content-Type", "application/x-www-form-urlencoded")
+                .headers("Content-Type", "application/pdf")
                 .headers("User-Agent", twikeyClient.getUserAgent())
                 .headers("Authorization", twikeyClient.getSessionToken())
                 .POST(HttpRequest.BodyPublishers.ofFile(Path.of(pdfRequest.pdfPath())))

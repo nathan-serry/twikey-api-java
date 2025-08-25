@@ -9,6 +9,8 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertNotNull;
 
@@ -46,17 +48,78 @@ public class InvoiceGatewayTest {
         Assume.assumeTrue("APIKey and CT are set", apiKey != null && ct != null);
         InvoiceRequests.CreateInvoiceRequest request = new InvoiceRequests.CreateInvoiceRequest("Inv-%s".formatted("Java-Sdk-" + System.currentTimeMillis()), 100.0, LocalDate.now().toString(), LocalDate.now().plusMonths(1).toString(), customer);
         JSONObject invoiceResponse = api.invoice().create(request);
+        assertNotNull("Invoice Id", invoiceResponse.getString("id"));
+        assertNotNull("Invoice Url", invoiceResponse.getString("url"));
+    }
 
-//        Map<String, String> invoiceDetails = new HashMap<>();
-//        invoiceDetails.put("number", "Invss123");
-//        invoiceDetails.put("title", "Invoice April");
-//        invoiceDetails.put("remittance", "123456789123");
-//        invoiceDetails.put("amount", "10.90");
-//        invoiceDetails.put("date", "2020-03-20");
-//        invoiceDetails.put("duedate", "2020-04-28");
-//        JSONObject invoiceResponse = api.invoice().create(Long.parseLong(ct), customer, invoiceDetails);
-//        assertNotNull("Payment URL", invoiceResponse.getString("url"));
-//        assertNotNull("Invoice Id", invoiceResponse.getString("id"));
+    @Test
+    public void testUpdateInvoice() throws IOException, TwikeyClient.UserException, InterruptedException {
+        Assume.assumeTrue("APIKey and CT are set", apiKey != null && ct != null);
+        InvoiceRequests.UpdateInvoiceRequest updateRequest = new InvoiceRequests.UpdateInvoiceRequest("58073359-7fd0-4683-a60f-8c08096a189e", "2025-09-01", "2025-09-08")
+                .setTitle("Invoice August");
+        JSONObject response = api.invoice().update(updateRequest);
+        System.out.println("Invoice Response: " + response.toString());
+        assertNotNull("Invoice Id", response.getString("id"));
+        assertNotNull("Invoice Url", response.getString("url"));
+    }
+
+    @Test
+    public void testDeleteInvoice() throws IOException, TwikeyClient.UserException, InterruptedException {
+        Assume.assumeTrue("APIKey and CT are set", apiKey != null && ct != null);
+        InvoiceRequests.CreateInvoiceRequest createRequest = new InvoiceRequests.CreateInvoiceRequest("Inv-%s".formatted("Java-Sdk-" + System.currentTimeMillis()), 100.0, LocalDate.now().toString(), LocalDate.now().plusMonths(1).toString(), customer);
+        JSONObject invoiceResponse = api.invoice().create(createRequest);
+
+        api.invoice().delete(invoiceResponse.getString("id"));
+    }
+
+    @Test
+    public void testInvoiceDetails() throws IOException, TwikeyClient.UserException, InterruptedException {
+        Assume.assumeTrue("APIKey and CT are set", apiKey != null && ct != null);
+        InvoiceRequests.InvoiceDetailRequest request = new InvoiceRequests.InvoiceDetailRequest("58073359-7fd0-4683-a60f-8c08096a189e")
+                .includeCustomer(true)
+                .includeMeta(true)
+                .includeLastPayment(true);
+        JSONObject response = api.invoice().details(request);
+        assertNotNull("Invoice Id", response.getString("id"));
+    }
+
+    @Test
+    public void testInvoiceAction() throws IOException, TwikeyClient.UserException, InterruptedException {
+        Assume.assumeTrue("APIKey and CT are set", apiKey != null && ct != null);
+        InvoiceRequests.InvoiceActionRequest request = InvoiceRequests.InvoiceActionRequest.paymentPlan("58073359-7fd0-4683-a60f-8c08096a189e", 0.5, 7.0, 6, "CORERECURRENTNL17291");
+        api.invoice().action(request);
+    }
+
+    @Test
+    public void testUBLUpload() throws IOException, TwikeyClient.UserException, InterruptedException {
+        Assume.assumeTrue("APIKey and CT are set", apiKey != null && ct != null);
+        InvoiceRequests.UblUploadRequest request = new InvoiceRequests.UblUploadRequest("/Users/nathanserry/Downloads/Inv-1752246605_ubl (1).xml");
+        JSONObject repsonse = api.invoice().UBL(request);
+        assertNotNull(repsonse);
+    }
+
+    @Test
+    public void testBatchCreation() throws IOException, TwikeyClient.UserException, InterruptedException {
+        Assume.assumeTrue("APIKey and CT are set", apiKey != null && ct != null);
+        List<InvoiceRequests.CreateInvoiceRequest> invoices = IntStream.range(0, 5)
+                .mapToObj(i -> new InvoiceRequests.CreateInvoiceRequest(
+                        "Inv-" + (System.currentTimeMillis() / 1000 + i), // invoice number
+                        100.0, // amount
+                        LocalDate.now().toString(), // title
+                        LocalDate.now().plusMonths(1).toString(), // title
+                        customer
+                ))
+                .toList();
+        InvoiceRequests.BulkInvoiceRequest request = new InvoiceRequests.BulkInvoiceRequest(invoices);
+        JSONObject repsonse = api.invoice().createBatch(request);
+        assertNotNull(repsonse);
+    }
+
+    @Test
+    public void testBatchDetails() throws IOException, TwikeyClient.UserException, InterruptedException {
+        Assume.assumeTrue("APIKey and CT are set", apiKey != null && ct != null);
+        JSONObject response = api.invoice().batchDetails("bulk-inv-150-KERuysJl7Q174d");
+        assertNotNull(response);
     }
 
     @Test
